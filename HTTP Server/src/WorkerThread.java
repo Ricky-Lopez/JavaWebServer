@@ -11,6 +11,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Set;
@@ -48,7 +50,7 @@ public class WorkerThread extends Thread {
 				}
 				
 				try {
-					clientSocket.setSoTimeout(3000);
+					clientSocket.setSoTimeout(5000);
 				} catch (SocketException e2) {
 					//send internal error
 					HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "500", "Internal Server Error");
@@ -62,16 +64,11 @@ public class WorkerThread extends Thread {
 				String clientRequestAsString = "";
 				String lineToAdd;
 				try {
-					while(!(lineToAdd = inFromClient.readLine()).equals("")) {
-						clientRequestAsString += lineToAdd + "\r\n";
+					int currentByteInt = -1;
+					while((currentByteInt = inFromClient.read()) != -1 && inFromClient.ready()) {
+						clientRequestAsString += (char) currentByteInt;
 					}
-					HTTPRequest tmpRequest = new HTTPRequest(clientRequestAsString);
-					if(tmpRequest.getContentLength() > 0 && tmpRequest.getContentLength() != null) {
-						int c;
-						while((c = inFromClient.read()) != -1) {
-							clientRequestAsString += (char)c;
-						}
-					}
+					System.out.println(clientRequestAsString);
 				} catch (IOException e1) {	//Test Case #20: if the client sends a NULL request.
 					//send 408 Request Timeout
 					HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "408", "Request Timeout");
@@ -145,7 +142,6 @@ public class WorkerThread extends Thread {
 				//send to appropriate handler (command)
 				switch(clientRequest.getCommand()) {
 					case "GET":
-						System.out.println("if modified by is: " + clientRequest.getIfModifiedBy());
 						if(clientRequest.getIfModifiedBy() != null) {
 							conditionalGet(clientRequest, outToClient, inFromClient);
 							break;
@@ -396,11 +392,9 @@ public class WorkerThread extends Thread {
 			return;
 		}
 		
-		System.out.println(lastModified.compareTo(ifModifiedBy));
 		
 		if(lastModified.compareTo(ifModifiedBy) < 1){
 			//not modified
-			System.out.println("NOT MODIFIED");
 			HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "304", "Not Modified");
 			response.addHeaderLines(null, null, null, null, generateExpirationDate(), null);
 			sendResponse(response, outToClient, null);
@@ -493,6 +487,13 @@ public class WorkerThread extends Thread {
 		//When the POST request doesn't have the "Content-Type" header, your server should return "HTTP/1.0 500 Internal Server Error".
 		if(clientRequest.getContentType() == null) {
 			HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "500", "Internal Server Error");
+			sendResponse(response, outToClient, null);
+			closeConnection(inFromClient, outToClient);
+			return;
+		}
+		
+		if(clientRequest.getContentLength() == 0) {
+			HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "204", "No Content");
 			sendResponse(response, outToClient, null);
 			closeConnection(inFromClient, outToClient);
 			return;
