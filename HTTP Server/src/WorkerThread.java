@@ -530,12 +530,31 @@ public class WorkerThread extends Thread {
 		
 		//run a process in server w/ cgi script
 		
-		/*
-		String systemCommand = "." + fileName;
+		
+		String systemCommand = "./" + fileName;
+		
 		
 		Runtime r = Runtime.getRuntime();
-		Process p = r.exec(systemCommand);
-		*/
+		try {
+			Process p = r.exec(systemCommand);
+			p.waitFor();
+			System.out.println(p.exitValue());
+		} catch (SecurityException e) {		// Not allowed to execute the .cgi file FINISH THIS! TODO
+			
+			HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "403", "Forbidden");
+			sendResponse(response, outToClient, null);
+			closeConnection(inFromClient, outToClient);
+			return;
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InterruptedException i) {
+			i.printStackTrace();
+		}
+		
+		
+		
+		
 		
 		//pass decoded payload to stdin
 		
