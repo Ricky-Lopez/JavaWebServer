@@ -499,13 +499,43 @@ public class WorkerThread extends Thread {
 			return;
 		}
 		
+		BufferedReader fileReader = null;
+		String fileName = clientRequest.getUri().substring(1); //RICKY: cut off the leading forward slash from the filename, as it would not find file otherwise. 
+		File requestedFile = new File(fileName);
+		
+		if(!fileName.substring(fileName.length()-6).contains(".cgi")) {
+			HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "405", "Method Not Allowed");
+			sendResponse(response, outToClient, null);
+			closeConnection(inFromClient, outToClient);
+			return;
+		}
+		try {
+			fileReader = new BufferedReader(new FileReader(requestedFile));
+			fileReader.close();
+		} catch (IOException e) {
+			//404 Not Found
+			HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "404", "Not Found");
+			sendResponse(response, outToClient, null);
+			closeConnection(inFromClient, outToClient);
+			return;
+		}
+		
 		String cgiScript = clientRequest.getUri().substring(1); //cut off leading forward slash
 		String encodedQueryString = clientRequest.getPayload();
 
 		String decodedQueryString = decodeQuery(encodedQueryString);
 		
+		System.out.println("RICKY SAYS: "+ decodedQueryString);
+		
 		
 		//run a process in server w/ cgi script
+		
+		/*
+		String systemCommand = "." + fileName;
+		
+		Runtime r = Runtime.getRuntime();
+		Process p = r.exec(systemCommand);
+		*/
 		
 		//pass decoded payload to stdin
 		
