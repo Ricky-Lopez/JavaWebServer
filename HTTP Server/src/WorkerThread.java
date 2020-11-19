@@ -4,7 +4,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketException;
 import java.nio.file.Files;
@@ -532,22 +534,40 @@ public class WorkerThread extends Thread {
 		
 		
 		String systemCommand = "./" + fileName;
+		String cmdArray[] = new String[2];
+		cmdArray[0] = systemCommand;
+		cmdArray[1] = decodedQueryString;
 		
 		
 		Runtime r = Runtime.getRuntime();
 		try {
 			Process p = r.exec(systemCommand);
-			p.waitFor();
-			System.out.println(p.exitValue());
-		} catch (SecurityException e) {		// Not allowed to execute the .cgi file FINISH THIS! TODO
+			InputStream stdInput = p.getInputStream();
+			OutputStream stdOutput = p.getOutputStream();
 			
+			byte[] queryStringB = decodedQueryString.getBytes();
+			
+			stdOutput.write(queryStringB);
+			stdOutput.close();
+			p.waitFor();
+			byte[] cgiByteArray = stdInput.readAllBytes();
+			
+			
+			HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "200", "OK");
+			response.addHeaderLines(getSupportedCommandsAsString(), Long.toString(cgiByteArray.length), getMIMEType(clientRequest.getUri()), 
+					generateExpirationDate());
+			sendResponse(response,outToClient, cgiByteArray);
+			closeConnection(inFromClient, outToClient);
+			
+			System.out.println("EXIT VALUE IS: " + p.exitValue());
+			return;
+		} catch (SecurityException e) {
+			e.printStackTrace();
+		} catch (IOException e) { // Not allowed to execute the .cgi file
 			HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "403", "Forbidden");
 			sendResponse(response, outToClient, null);
 			closeConnection(inFromClient, outToClient);
 			return;
-			
-		} catch (IOException e) {
-			e.printStackTrace();
 		} catch (InterruptedException i) {
 			i.printStackTrace();
 		}
@@ -558,11 +578,23 @@ public class WorkerThread extends Thread {
 		
 		//pass decoded payload to stdin
 		
-		//REMOVE
+		/*
 		HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "200", "OK");
 		sendResponse(response, outToClient, null);
 		closeConnection(inFromClient, outToClient);
 		return;
+		*/
+	}
+	
+	public static ArrayList <Byte> readBytes(InputStream inputStream) throws IOException {
+		ArrayList <Byte> byteList = new ArrayList<Byte>();
+		
+		int currentByteInt = -1;
+		while ((currentByteInt = inputStream.read()) != -1) {
+			byte currentByte = (byte) currentByteInt;
+			byteList.add(currentByte);
+		}
+		return byteList;
 	}
 	
 	

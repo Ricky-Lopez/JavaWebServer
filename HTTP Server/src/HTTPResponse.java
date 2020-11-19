@@ -21,6 +21,14 @@ public class HTTPResponse {
 		this.statusPhrase = statusPhrase;
 	}
 	
+	public void addHeaderLines(String allow, String contentLength, String contentType, String expires) {
+		this.allow += allow;
+		this.contentLength += contentLength;
+		this.contentType += contentType;
+		this.expires += expires;
+		hasHeaderLines = true;
+	}
+	
 	public void addHeaderLines(String allow, String contentEncoding, String contentLength, String contentType, 
 			String expires, String lastModified) {
 		this.allow += allow;
