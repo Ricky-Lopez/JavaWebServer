@@ -554,7 +554,7 @@ public class WorkerThread extends Thread {
 			
 			
 			HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "200", "OK");
-			response.addHeaderLines(getSupportedCommandsAsString(), Long.toString(cgiByteArray.length), getMIMEType(clientRequest.getUri()), 
+			response.addHeaderLines(getSupportedCommandsAsString(), Long.toString(cgiByteArray.length), "text/html", 
 					generateExpirationDate());
 			sendResponse(response,outToClient, cgiByteArray);
 			closeConnection(inFromClient, outToClient);
