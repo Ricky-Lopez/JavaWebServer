@@ -45,12 +45,12 @@ public class HTTPResponse {
 		String statusLine = protocol + " " + statusCode + " " + statusPhrase;
 		String headerLines = "";
 		if (hasHeaderLines) {
-			headerLines += (allow != null) ? allow + "\r\n" : "";
-			headerLines += (contentEncoding != null) ? contentEncoding + "\r\n" : "";
-			headerLines += (contentLength != null) ? contentLength + "\r\n" : "";
-			headerLines += (contentType != null) ? contentType + "\r\n" : "";
-			headerLines += (expires!= null) ? expires + "\r\n" : "";
-			headerLines += (lastModified != null) ? lastModified + "\r\n" : "";
+			headerLines += (!allow.equals("Allow: ")) ? allow + "\r\n" : "";
+			headerLines += (!contentEncoding.equals("Content-Encoding: ")) ? contentEncoding + "\r\n" : "";
+			headerLines += (!contentLength.equals("Content-Length: ")) ? contentLength + "\r\n" : "";
+			headerLines += (!contentType.equals("Content-Type: ")) ? contentType + "\r\n" : "";
+			headerLines += (!expires.equals("Expires: ")) ? expires + "\r\n" : "";
+			headerLines += (!lastModified.equals("Last-Modified: ")) ? lastModified + "\r\n" : "";
 			
 			return response += (statusLine + "\r\n" + headerLines + "\r\n");
 		}

@@ -49,7 +49,7 @@ class WorkerThreadTest {
 		DataOutputStream outToClient = null;
 		BufferedReader inFromClient = null;
 		t.forTest(s2);
-		t.post(new HTTPRequest(s2), outToClient, inFromClient);
+		
 		/*
 		GET /resources/bitcoin.pdf HTTP/1.0
 		If-Modified-Since: foobar 30000

@@ -9,6 +9,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.ParseException;
@@ -17,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.TimeZone;
@@ -31,6 +33,7 @@ public class WorkerThread extends Thread {
 	private final String UNSUPPORTED_MIME_DEFAULT = "application/octet-stream";
 	private final String REQUIRED_PROTOCOL = "HTTP/1.0";
 	private final float REQUIRED_PROTOCOL_VERSION = 1.0f;
+	private final int NUM_ENVIRONMENT_VARIABLES = 6;
 
 	@Override
 	public void run() {
@@ -70,7 +73,6 @@ public class WorkerThread extends Thread {
 					while((currentByteInt = inFromClient.read()) != -1 && inFromClient.ready()) {
 						clientRequestAsString += (char) currentByteInt;
 					}
-					System.out.println(clientRequestAsString);
 				} catch (IOException e1) {	//Test Case #20: if the client sends a NULL request.
 					//send 408 Request Timeout
 					HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "408", "Request Timeout");
@@ -151,7 +153,7 @@ public class WorkerThread extends Thread {
 						get(clientRequest, outToClient, inFromClient);
 						break;
 					case "POST":
-						post(clientRequest, outToClient, inFromClient); //treat post the same as get
+						post(clientRequest, outToClient, inFromClient, clientSocket); //treat post the same as get
 						break;
 					case "HEAD":
 						head(clientRequest, outToClient, inFromClient);
@@ -178,6 +180,7 @@ public class WorkerThread extends Thread {
 			outToClient.write(response.generateHttpResponse().getBytes("UTF-8"));
 			outToClient.flush();
 			if(body != null) {
+				//System.out.println("The payload for this response is: " + new String(body, StandardCharsets.UTF_8));
 				outToClient.write(body);
 				outToClient.flush();
 			}
@@ -477,7 +480,7 @@ public class WorkerThread extends Thread {
 		closeConnection(inFromClient, outToClient);
 	}
 	
-	public void post(HTTPRequest clientRequest, DataOutputStream outToClient, BufferedReader inFromClient) {
+	public void post(HTTPRequest clientRequest, DataOutputStream outToClient, BufferedReader inFromClient, Socket clientSocket) {
 		//When the POST request doesn't have the "Content-Length" header, or the value is not numeric, your server should return "HTTP/1.0 411 Length Required".
 		if(clientRequest.getContentLength() == null) {
 			HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "411", "Length Required");
@@ -493,13 +496,14 @@ public class WorkerThread extends Thread {
 			closeConnection(inFromClient, outToClient);
 			return;
 		}
-		
+		/*
 		if(clientRequest.getContentLength() == 0) {
 			HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "204", "No Content");
 			sendResponse(response, outToClient, null);
 			closeConnection(inFromClient, outToClient);
 			return;
 		}
+		*/
 		
 		BufferedReader fileReader = null;
 		String fileName = clientRequest.getUri().substring(1); //RICKY: cut off the leading forward slash from the filename, as it would not find file otherwise. 
@@ -534,15 +538,44 @@ public class WorkerThread extends Thread {
 		
 		
 		String systemCommand = "./" + fileName;
+		System.out.println("THE SYSTEM COMMAND IS: " + systemCommand);
 		String cmdArray[] = new String[2];
 		cmdArray[0] = systemCommand;
 		cmdArray[1] = decodedQueryString;
 		
 		
 		Runtime r = Runtime.getRuntime();
+		/*ArrayList<String> environmentVariables = new ArrayList<>();
+		environmentVariables.add("CONTENT_LENGTH=" + decodedQueryString.getBytes().length);
+		environmentVariables.add("SCRIPT_NAME=" + clientRequest.getUri());
+		environmentVariables.add("SERVER_NAME=" + clientSocket.getInetAddress().getHostAddress());
+		environmentVariables.add("SERVER_PORT=" + clientSocket.getPort());
+		environmentVariables.add(clientRequest.getFrom() != null ? "HTTP_FROM=" + clientRequest.getFrom() : null);
+		environmentVariables.add(clientRequest.getUserAgent() != null ? "HTTP_USER_AGENT=" + clientRequest.getUserAgent() : null);
+		
+		String[] env = environmentVariables.toArray(new String[NUM_ENVIRONMENT_VARIABLES]);
+		for(int i = 0; i < env.length; i++) {
+			System.out.println(env[i]);
+		}
+		*/
 		try {
-			Process p = r.exec(systemCommand);
-			InputStream stdInput = p.getInputStream();
+			ProcessBuilder pb = new ProcessBuilder(systemCommand);
+			Map<String, String> env = pb.environment();
+			env.put("CONTENT_LENGTH", String.valueOf(clientRequest.getContentLength()));
+			env.put("SCRIPT_NAME", clientRequest.getUri());
+			env.put("SERVER_NAME", clientSocket.getInetAddress().getHostAddress());
+			env.put("SERVER_PORT", String.valueOf(clientSocket.getPort()));
+			if(clientRequest.getFrom() != null)
+				env.put("HTTP_FROM", clientRequest.getFrom());
+			if(clientRequest.getUserAgent() != null)
+				env.put("HTTP_USER_AGENT", clientRequest.getUserAgent());
+			
+			/*for(String variable : env.keySet()) {
+				System.out.println(variable + "=" + env.get(variable));
+			}*/
+			
+			Process p = pb.start();
+			BufferedReader stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
 			OutputStream stdOutput = p.getOutputStream();
 			
 			byte[] queryStringB = decodedQueryString.getBytes();
@@ -550,20 +583,36 @@ public class WorkerThread extends Thread {
 			stdOutput.write(queryStringB);
 			stdOutput.close();
 			p.waitFor();
-			byte[] cgiByteArray = stdInput.readAllBytes();
+			
+			String output = "";
+			String line = "";
+			while ((line = stdInput.readLine()) != null)
+			      output += line + "\n";
+			System.out.println("RETURNED FROM STDOUT:");
+			System.out.println(output);
+			System.out.println();
+			
+			
+			if(output.length() == 0) {
+				HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "204", "No Content");
+				sendResponse(response, outToClient, null);
+				closeConnection(inFromClient, outToClient);
+				return;
+			}
 			
 			
 			HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "200", "OK");
-			response.addHeaderLines(getSupportedCommandsAsString(), Long.toString(cgiByteArray.length), "text/html", 
+			response.addHeaderLines(getSupportedCommandsAsString(), Long.toString(output.getBytes().length), "text/html", 
 					generateExpirationDate());
-			sendResponse(response,outToClient, cgiByteArray);
+			sendResponse(response,outToClient, output.getBytes());
 			closeConnection(inFromClient, outToClient);
 			
-			System.out.println("EXIT VALUE IS: " + p.exitValue());
+			//System.out.println("EXIT VALUE IS: " + p.exitValue());
 			return;
 		} catch (SecurityException e) {
 			e.printStackTrace();
 		} catch (IOException e) { // Not allowed to execute the .cgi file
+			System.out.println("We got an IO Exception because: " + e.getMessage());
 			HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "403", "Forbidden");
 			sendResponse(response, outToClient, null);
 			closeConnection(inFromClient, outToClient);
@@ -617,5 +666,6 @@ public class WorkerThread extends Thread {
 	public void forTest(String s) {
 		HTTPRequest testRequest = new HTTPRequest(s);
 		System.out.println(testRequest.toString());
+		System.out.println("ua: " + testRequest.getUserAgent());
 	}
 }
