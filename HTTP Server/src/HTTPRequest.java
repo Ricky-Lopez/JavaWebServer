@@ -79,7 +79,6 @@ public class HTTPRequest {
 					payload = tmp;
 			}	
 		}
-		System.out.println("iffffff mod: " + ifModifiedDate);
 	}
 	
 	public HTTPRequest(String command, String uri, String protocol) {

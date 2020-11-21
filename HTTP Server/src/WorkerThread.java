@@ -227,7 +227,6 @@ public class WorkerThread extends Thread {
 	}
 	
 	public void get(HTTPRequest clientRequest, DataOutputStream outToClient, BufferedReader inFromClient) {
-		System.out.println("In GET");
 		BufferedReader fileReader = null;
 		String fileName = clientRequest.getUri().substring(1); //RICKY: cut off the leading forward slash from the filename, as it would not find file otherwise. 
 		File requestedFile = new File(fileName);
@@ -330,6 +329,8 @@ public class WorkerThread extends Thread {
 			return "application/x-gzip";
 		case "zip":
 			return "application/zip";
+		case "cgl":
+			return "application/octet-stream";
 		default:
 			return UNSUPPORTED_MIME_DEFAULT;
 		}
@@ -344,7 +345,6 @@ public class WorkerThread extends Thread {
 	}
 	
 	public void conditionalGet(HTTPRequest clientRequest, DataOutputStream outToClient, BufferedReader inFromClient) {
-		System.out.println("In CONDITIONAL GET");
 		BufferedReader fileReader = null;
 		String fileName = clientRequest.getUri().substring(1); //RICKY: cut off the leading forward slash from the filename, as it would not find file otherwise. 
 		File requestedFile = new File(fileName);
@@ -531,14 +531,12 @@ public class WorkerThread extends Thread {
 
 		String decodedQueryString = decodeQuery(encodedQueryString);
 		
-		System.out.println("RICKY SAYS: "+ decodedQueryString);
 		
 		
 		//run a process in server w/ cgi script
 		
 		
 		String systemCommand = "./" + fileName;
-		System.out.println("THE SYSTEM COMMAND IS: " + systemCommand);
 		String cmdArray[] = new String[2];
 		cmdArray[0] = systemCommand;
 		cmdArray[1] = decodedQueryString;
@@ -588,9 +586,6 @@ public class WorkerThread extends Thread {
 			String line = "";
 			while ((line = stdInput.readLine()) != null)
 			      output += line + "\n";
-			System.out.println("RETURNED FROM STDOUT:");
-			System.out.println(output);
-			System.out.println();
 			
 			
 			if(output.length() == 0) {
