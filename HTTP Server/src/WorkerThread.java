@@ -7,8 +7,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -22,6 +25,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.TimeZone;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 public class WorkerThread extends Thread {
 	private Socket clientSocket;
@@ -239,6 +244,9 @@ public class WorkerThread extends Thread {
 			return;
 		}
 		
+		//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	PROJECT PART 3	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		
+		/* COMMENTED OUT FOR PROJECT PART 3 ONLY
 		try {
 			fileReader = new BufferedReader(new FileReader(requestedFile));
 		} catch (FileNotFoundException e) {
@@ -248,14 +256,75 @@ public class WorkerThread extends Thread {
 			closeConnection(inFromClient, outToClient);
 			return;
 		}
+		*/
+		try {
+			sleep(1000);
+		} catch (InterruptedException e3) {
+			// Auto-generated catch block
+			e3.printStackTrace();
+		}
+		String body;
+        LocalDateTime myDateObj = LocalDateTime.now();
+        DateTimeFormatter myFormatObj = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        String formattedDate = myDateObj.format(myFormatObj);
+        System.out.printf("Formatted Current date+time %s \n\n",formattedDate);
+        
+        try {
+        	
+			String encodedDateTime = URLEncoder.encode(formattedDate, "UTF-8");
+			encodedDateTime = "lasttime="+ encodedDateTime.replace("+", "%20");
+			
+			if( clientRequest.checkCookie()) {    //if the request contains a cookie
+				if(clientRequest.getCookie().contains("lasttime=")) { //if the cookie is indeed "lasttime" . 
+					
+					System.out.printf("Cookie from request is: %s\n\n", clientRequest.getCookie());
+					String clientCookie = clientRequest.getCookie().substring(9);
+
+			        
+			        String decodedDateTime = URLDecoder.decode(clientCookie, "UTF-8");
+			        
+			        
+			        body = createHTMLSeen(decodedDateTime);
+			        
+			        HTTPResponse response1 = new HTTPResponse(REQUIRED_PROTOCOL, "200", "OK") ;
+			        response1.addHeaderLines(getSupportedCommandsAsString(), "identity", Long.toString(body.length()), "text/html",
+			        		generateExpirationDate(), encodedDateTime, encodedDateTime);
+			        sendResponse(response1, outToClient, body.getBytes());
+			        System.out.println(body + "\n");
+			        closeConnection(inFromClient, outToClient);
+			        return;
+			        	
+				}
+			}
+			
+			body = createHTML();
+			HTTPResponse response1 = new HTTPResponse(REQUIRED_PROTOCOL, "200", "OK");
+			response1.addHeaderLines(getSupportedCommandsAsString(), "identity", Long.toString(body.length()), "text/html",
+					generateExpirationDate(), encodedDateTime, encodedDateTime);
+			sendResponse(response1, outToClient, body.getBytes());
+			System.out.println(body + "\n");
+			closeConnection(inFromClient, outToClient);
+			return;
+			
+		} catch (UnsupportedEncodingException e2) {
+			// Auto-generated catch block
+			e2.printStackTrace();
+		}
+		
+        //TODO : potentially fix the last-modified header.
+        //TODO : account for multiple cookies.
+        
+		//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		
 		HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "200", "OK");
 		response.addHeaderLines(getSupportedCommandsAsString(), "identity", Long.toString(requestedFile.length()), getMIMEType(clientRequest.getUri()), 
 				generateExpirationDate(), toHttpDateFormat(new Date(requestedFile.lastModified())));
 		
+		
+		
 		//read text file to get the file as a String
 		if(getMIMEType(clientRequest.getUri()).equals("text/html") || getMIMEType(clientRequest.getUri()).equals("text/plain")) {
-			String body = "";
+			body = "";
 			try {
 				int c;
 				while((c = fileReader.read()) != -1) {
@@ -274,9 +343,9 @@ public class WorkerThread extends Thread {
 		
 		//read in file as bytes
 		else {
-			byte[] body = null;
+			byte[] bodyb = null;
 			try {
-				body = Files.readAllBytes(Paths.get(clientRequest.getUri().substring(1)));
+				bodyb = Files.readAllBytes(Paths.get(clientRequest.getUri().substring(1)));
 			} catch (IOException e) {
 				//any exceptions thrown when looking for and reading the file can be handled with 403.
 				response = new HTTPResponse(REQUIRED_PROTOCOL, "403", "Forbidden");
@@ -290,7 +359,7 @@ public class WorkerThread extends Thread {
 				}
 				return;
 			}
-			sendResponse(response, outToClient, body);
+			sendResponse(response, outToClient, bodyb);
 		}
 		closeConnection(inFromClient, outToClient);
 	}
@@ -641,6 +710,27 @@ public class WorkerThread extends Thread {
 		return byteList;
 	}
 	
+	public String createHTML() {
+		return "<html>\n "
+				+ "<body>\n "
+				+ "<h1> CS 352 Welcome Page </h1>\n "
+				+ "<p>\n "
+				+ "Welcome! We have not seen you before.\n "
+				+ "<p>\n "
+				+ "</body>\n "
+				+ "</html>";
+	}
+	
+	public String createHTMLSeen(String datetime) {
+		return "<html>\n "
+				+ "<body>\n "
+				+ "<h1>CS 352 Welcome Page </h1>\n "
+				+ "<p>\n "
+				+ "Welcome back! Your last visit was at: "+datetime+"\n "
+				+ "<p>\n "
+				+ "</body>\n "
+				+ "</html>";
+	}
 	
 	public String decodeQuery(String encoded) {
 		String encodedQueryString = encoded;

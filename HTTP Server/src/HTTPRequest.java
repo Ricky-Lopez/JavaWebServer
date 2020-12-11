@@ -7,6 +7,8 @@ public class HTTPRequest {
 	private final String USER_AGENT = "User-Agent: ";
 	private final String CONTENT_TYPE = "Content-Type: ";
 	private final String CONTENT_LENGTH = "Content-Length: ";
+	private final String COOKIE = "Cookie: ";
+	private Boolean hasCookie = false;
 	
 	//request line
 	private String command;
@@ -17,6 +19,7 @@ public class HTTPRequest {
 	private String userAgent; 
 	private String contentType;
 	private String contentLength;
+	private String cookie;
 	
 	
 	//header fields
@@ -67,6 +70,9 @@ public class HTTPRequest {
 			if (!tmp.equals("")) {
 				if(tmp.length() > 6 && tmp.substring(0,6).equals(HTTP_FROM))
 					from = tmp.substring(6);
+				else if(tmp.length() > 8 && tmp.substring(0, 8).equals(COOKIE)) {
+					cookie = tmp.substring(8); this.hasCookie = true;
+				}
 				else if(tmp.length() > 12 && tmp.substring(0,12).equals(USER_AGENT))
 					userAgent = tmp.substring(12);
 				else if(tmp.length() > 14 && tmp.substring(0,14).equals(CONTENT_TYPE))
@@ -79,6 +85,7 @@ public class HTTPRequest {
 					payload = tmp;
 			}	
 		}
+
 	}
 	
 	public HTTPRequest(String command, String uri, String protocol) {
@@ -94,6 +101,7 @@ public class HTTPRequest {
 		String ua = "";
 		String ct = "";
 		String cl = "";
+		String cook = "";
 		String requestLine = command + " " + uri + " " + protocol;
 		request += requestLine;
 		if (ifModifiedDate != "" && ifModifiedDate != null) {
@@ -117,6 +125,10 @@ public class HTTPRequest {
 		if(contentLength != "" && contentLength != null) {
 			cl = CONTENT_LENGTH + contentLength;
 			request += "\n" + cl;
+		}
+		if(cookie != "" && cookie != null) {
+			cook = COOKIE + cookie;
+			request += "\n" + cook;
 		}
 		if (payload != "" && payload != null) {
 			request += "\n\n" + payload;
@@ -162,6 +174,14 @@ public class HTTPRequest {
 	
 	public String getContentType() {
 		return contentType;
+	}
+	
+	public String getCookie() {
+		return cookie;
+	}
+	
+	public Boolean checkCookie() {
+		return hasCookie;
 	}
 	
 	//returns null if content length cannot be parsed correctly (non-numeric)
