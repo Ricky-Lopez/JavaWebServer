@@ -38,6 +38,7 @@ public class WorkerThread extends Thread {
 	private final String UNSUPPORTED_MIME_DEFAULT = "application/octet-stream";
 	private final String REQUIRED_PROTOCOL = "HTTP/1.0";
 	private final float REQUIRED_PROTOCOL_VERSION = 1.0f;
+	private final float REQUIRED_PROTOCOL_VERSION1 = 1.1f;
 	private final int NUM_ENVIRONMENT_VARIABLES = 6;
 
 	@Override
@@ -111,13 +112,14 @@ public class WorkerThread extends Thread {
 				}
 				
 				//  If your server receives a request that has a version number greater than 1.0, the version is higher than what you can support, and you should respond with a "505 HTTP Version Not Supported"
-				if (Float.compare(protocolVersion, REQUIRED_PROTOCOL_VERSION) > 0) {
+				/*if ((Float.compare(protocolVersion, REQUIRED_PROTOCOL_VERSION) > 0) ||
+						(Float.compare(protocolVersion, REQUIRED_PROTOCOL_VERSION1) > 0)) {
 					// send 505 HTTP Version Not Supported
 					HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "505", "HTTP Version Not Supported");
 					sendResponse(response, outToClient, null);
 					closeConnection(inFromClient, outToClient);
 					return;
-				}
+				}*/
 					
 				
 				//check that command is supported
@@ -267,7 +269,6 @@ public class WorkerThread extends Thread {
         LocalDateTime myDateObj = LocalDateTime.now();
         DateTimeFormatter myFormatObj = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         String formattedDate = myDateObj.format(myFormatObj);
-        System.out.printf("Formatted Current date+time %s \n\n",formattedDate);
         
         try {
         	
@@ -276,19 +277,17 @@ public class WorkerThread extends Thread {
 			
 			if( clientRequest.checkCookie()) {    //if the request contains a cookie
 				if(clientRequest.getCookie().contains("lasttime=")) { //if the cookie is indeed "lasttime" . 
-					
-					System.out.printf("Cookie from request is: %s\n\n", clientRequest.getCookie());
+	
 					String clientCookie = clientRequest.getCookie().substring(9);
 
 			        
 			        String decodedDateTime = URLDecoder.decode(clientCookie, "UTF-8");
 			        
-			        
 			        body = createHTMLSeen(decodedDateTime);
 			        
 			        HTTPResponse response1 = new HTTPResponse(REQUIRED_PROTOCOL, "200", "OK") ;
 			        response1.addHeaderLines(getSupportedCommandsAsString(), "identity", Long.toString(body.length()), "text/html",
-			        		generateExpirationDate(), encodedDateTime, encodedDateTime);
+			        		generateExpirationDate(), decodedDateTime.substring(0, 19), encodedDateTime);
 			        sendResponse(response1, outToClient, body.getBytes());
 			        System.out.println(body + "\n");
 			        closeConnection(inFromClient, outToClient);
@@ -300,7 +299,7 @@ public class WorkerThread extends Thread {
 			body = createHTML();
 			HTTPResponse response1 = new HTTPResponse(REQUIRED_PROTOCOL, "200", "OK");
 			response1.addHeaderLines(getSupportedCommandsAsString(), "identity", Long.toString(body.length()), "text/html",
-					generateExpirationDate(), encodedDateTime, encodedDateTime);
+					generateExpirationDate(), URLDecoder.decode(encodedDateTime, "UTF-8").substring(0, 19) , encodedDateTime);
 			sendResponse(response1, outToClient, body.getBytes());
 			System.out.println(body + "\n");
 			closeConnection(inFromClient, outToClient);

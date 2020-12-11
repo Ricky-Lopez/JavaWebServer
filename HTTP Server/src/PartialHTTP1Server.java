@@ -11,6 +11,7 @@ public class PartialHTTP1Server {
 		final int INITIAL_POOL_SIZE = 5;
 		final int MAX_THREAD_COUNT = 50;
 		final String PROTOCOL = "HTTP/1.0";
+		final String PROTOCOL1 = "HTTP/1.1";
 		final String UNAVAILABLE_CODE = "503";
 		final String UNAVAILABLE_MSG = "Service Unavailable";
 		
