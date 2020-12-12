@@ -295,11 +295,11 @@ public class WorkerThread extends Thread {
 			        	
 				}
 			}
-			
+
 			body = createHTML();
 			HTTPResponse response1 = new HTTPResponse(REQUIRED_PROTOCOL, "200", "OK");
 			response1.addHeaderLines(getSupportedCommandsAsString(), "identity", Long.toString(body.length()), "text/html",
-					generateExpirationDate(), URLDecoder.decode(encodedDateTime, "UTF-8").substring(0, 19) , encodedDateTime);
+					generateExpirationDate(), (URLDecoder.decode(encodedDateTime, "UTF-8")).substring(9, 19) , encodedDateTime);
 			sendResponse(response1, outToClient, body.getBytes());
 			System.out.println(body + "\n");
 			closeConnection(inFromClient, outToClient);

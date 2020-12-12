@@ -1,4 +1,9 @@
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.StringTokenizer;
 
 public class HTTPRequest {
@@ -71,7 +76,23 @@ public class HTTPRequest {
 				if(tmp.length() > 6 && tmp.substring(0,6).equals(HTTP_FROM))
 					from = tmp.substring(6);
 				else if(tmp.length() > 8 && tmp.substring(0, 8).equals(COOKIE)) {
-					cookie = tmp.substring(8); this.hasCookie = true;
+					cookie = tmp.substring(8);
+					if(cookie.substring(0, 9).equals("lasttime=")) {
+						String cookieDateString = cookie.substring(9).trim();
+						System.out.println("date string" + cookieDateString);
+						try {
+							cookieDateString = URLDecoder.decode(cookieDateString, "UTF-8");
+							System.out.println("decoded cookie date " + cookieDateString);
+							LocalDateTime cookie = LocalDateTime.parse(cookieDateString.replace(' ', 'T'));
+							LocalDateTime today = LocalDateTime.now();	
+							if(cookie.toLocalDate().compareTo(today.toLocalDate()) <= 0) { //cookie date must be in past
+								this.hasCookie = true;
+							}
+						} catch (UnsupportedEncodingException | DateTimeParseException ex) { 
+							System.out.println(ex.getMessage());
+							return;
+						}			
+					}
 				}
 				else if(tmp.length() > 12 && tmp.substring(0,12).equals(USER_AGENT))
 					userAgent = tmp.substring(12);
