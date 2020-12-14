@@ -29,7 +29,7 @@ class WorkerThreadTest {
 	}
 	*/
 	
-	@Test 
+	/*@Test 
 	void testNewRequest() {
 		WorkerThread t = new WorkerThread(new Socket());
 		String requestString = "POST /cgi_bin/CgiQuery.cgi HTTP/1.0\n"+
@@ -50,11 +50,6 @@ class WorkerThreadTest {
 		BufferedReader inFromClient = null;
 		t.forTest(s2);
 		
-		/*
-		GET /resources/bitcoin.pdf HTTP/1.0
-		If-Modified-Since: foobar 30000
-		*/
-
-	}
+	}*/
 
 }

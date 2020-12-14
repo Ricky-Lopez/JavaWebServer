@@ -37,14 +37,11 @@ public class WorkerThread extends Thread {
 								 "application/pdf", "application/x-gzip", "application/zip"); 
 	private final String UNSUPPORTED_MIME_DEFAULT = "application/octet-stream";
 	private final String REQUIRED_PROTOCOL = "HTTP/1.0";
-	private final float REQUIRED_PROTOCOL_VERSION = 1.0f;
-	private final float REQUIRED_PROTOCOL_VERSION1 = 1.1f;
-	private final int NUM_ENVIRONMENT_VARIABLES = 6;
 
 	@Override
 	public void run() {
-		// TODO Auto-generated method stub
-		//set up read in/write out
+
+				//set up read in/write out
 				BufferedReader inFromClient = null;
 				DataOutputStream outToClient = null;
 				try {
@@ -79,7 +76,7 @@ public class WorkerThread extends Thread {
 					while((currentByteInt = inFromClient.read()) != -1 && inFromClient.ready()) {
 						clientRequestAsString += (char) currentByteInt;
 					}
-				} catch (IOException e1) {	//Test Case #20: if the client sends a NULL request.
+				} catch (IOException e1) { //If the client sends a NULL request.
 					//send 408 Request Timeout
 					HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "408", "Request Timeout");
 					sendResponse(response, outToClient, null);
@@ -89,38 +86,20 @@ public class WorkerThread extends Thread {
 				
 				System.out.println("We Read: " + clientRequestAsString);
 				
-				/*if(clientRequestAsString.contains("If-Modified-Since:")) { //If client request contains the If Modified header field.
-					clientRequestAsString = clientRequestAsString.substring(0, clientRequestAsString.indexOf("If-Modified-Since:")) + " " + clientRequestAsString.substring(clientRequestAsString.indexOf("If-Modified-Since:"));
-				}*/
-				
 				//Convert string request to HTTP request for simplicity
 				HTTPRequest clientRequest = new HTTPRequest(clientRequestAsString);
-		
-				//Check that request uses correct protocol
 				
 				//If your server receives a request that does not have a version number, it is considered malformed and should get a "400 Bad Request" response.
-				float protocolVersion;
 				try {
-					protocolVersion = Float.parseFloat(clientRequest.getProtocolVersionNumber());
+					Float.parseFloat(clientRequest.getProtocolVersionNumber());
 				}
-				catch(NullPointerException | NumberFormatException e) { //protocol v. is null or does not contain parseable float
+				catch(NullPointerException | NumberFormatException e) { //protocol version is null or does not contain parseable float
 					//send 400 Bad Request
-					HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "400", "Bad Request"); //probably separate the sending of each code response into methods to avoid duplicate code
+					HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "400", "Bad Request");
 					sendResponse(response, outToClient, null);
 					closeConnection(inFromClient, outToClient);
 					return;
-				}
-				
-				//  If your server receives a request that has a version number greater than 1.0, the version is higher than what you can support, and you should respond with a "505 HTTP Version Not Supported"
-				/*if ((Float.compare(protocolVersion, REQUIRED_PROTOCOL_VERSION) > 0) ||
-						(Float.compare(protocolVersion, REQUIRED_PROTOCOL_VERSION1) > 0)) {
-					// send 505 HTTP Version Not Supported
-					HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "505", "HTTP Version Not Supported");
-					sendResponse(response, outToClient, null);
-					closeConnection(inFromClient, outToClient);
-					return;
-				}*/
-					
+				}	
 				
 				//check that command is supported
 				if (!(SUPPORTED_COMMANDS.contains(clientRequest.getCommand()))){
@@ -148,8 +127,6 @@ public class WorkerThread extends Thread {
 					return;	
 				}
 				
-				
-				
 				//send to appropriate handler (command)
 				switch(clientRequest.getCommand()) {
 					case "GET":
@@ -166,20 +143,27 @@ public class WorkerThread extends Thread {
 						head(clientRequest, outToClient, inFromClient);
 						break;
 				}
-	}
+	} //end run method
 	
+	//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	CONSTRUCTORS   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	//Creates a WorkerThread that uses the given socket for communication
 	public WorkerThread(Socket clientSocket) {
 		this.clientSocket = clientSocket;
 	}
 	
+	//Default empty constructor for WorkerThread -> uses superclass's (Thread) constructor
 	public WorkerThread() {
 		
 	}
+	//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	END CONSTRUCTORS   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	
+	
+	//Sets the socket for this WorkerThread to use for communication
 	public void setSocket(Socket clientSocket) {
 		this.clientSocket = clientSocket;
 	}
 	
+	//Sends the given HTTP Response to the client. If request has no body, send null for body parameter
 	public void sendResponse(HTTPResponse response, DataOutputStream outToClient, byte[] body) {
 		try {
 			System.out.println("SENDING: ");
@@ -203,6 +187,7 @@ public class WorkerThread extends Thread {
 		}
 	}
 	
+	//Flushes output streams and closes sockets
 	public void closeConnection(BufferedReader inFromClient, DataOutputStream outToClient) {
 			try {
 				outToClient.flush();
@@ -233,6 +218,7 @@ public class WorkerThread extends Thread {
 		
 	}
 	
+	//Method to fulfill Get requests
 	public void get(HTTPRequest clientRequest, DataOutputStream outToClient, BufferedReader inFromClient) {
 		BufferedReader fileReader = null;
 		String fileName = clientRequest.getUri().substring(1); //RICKY: cut off the leading forward slash from the filename, as it would not find file otherwise. 
@@ -245,6 +231,7 @@ public class WorkerThread extends Thread {
 			closeConnection(inFromClient, outToClient);
 			return;
 		}
+
 		
 		//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	PROJECT PART 3	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		
@@ -295,7 +282,8 @@ public class WorkerThread extends Thread {
 			        	
 				}
 			}
-
+			
+			//if request does not contain a cookie
 			body = createHTML();
 			HTTPResponse response1 = new HTTPResponse(REQUIRED_PROTOCOL, "200", "OK");
 			response1.addHeaderLines(getSupportedCommandsAsString(), "identity", Long.toString(body.length()), "text/html",
@@ -306,15 +294,13 @@ public class WorkerThread extends Thread {
 			return;
 			
 		} catch (UnsupportedEncodingException e2) {
-			// Auto-generated catch block
 			e2.printStackTrace();
 		}
-		
-        //TODO : potentially fix the last-modified header.
-        //TODO : account for multiple cookies.
         
 		//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		
+        /* COMMENTED OUT FOR PROJECT PT3 ONLY
+        //Create response to send back to client
 		HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "200", "OK");
 		response.addHeaderLines(getSupportedCommandsAsString(), "identity", Long.toString(requestedFile.length()), getMIMEType(clientRequest.getUri()), 
 				generateExpirationDate(), toHttpDateFormat(new Date(requestedFile.lastModified())));
@@ -361,20 +347,24 @@ public class WorkerThread extends Thread {
 			sendResponse(response, outToClient, bodyb);
 		}
 		closeConnection(inFromClient, outToClient);
+		*/
 	}
 	
+	//Generates an expiration date for the response
 	public String generateExpirationDate() {
 		Calendar expireDate = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
 		expireDate.add(Calendar.DATE, 1); //sets date to be next day
 		return toHttpDateFormat(expireDate.getTime());
 	}
 	
+	//Formats a date according the HTTP protocol formatting
 	private String toHttpDateFormat(Date date) {
 		SimpleDateFormat httpDateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z");
 		httpDateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
 		return httpDateFormat.format(date);
 	}
 	
+	//Determines the MIME type of a given file
 	public String getMIMEType(String filePath) {
 		String[] deliminatedString = filePath.split("\\.");
 		String fileExtension = deliminatedString[deliminatedString.length-1]; //extension should be last element
@@ -404,6 +394,7 @@ public class WorkerThread extends Thread {
 		}
 	}
 	
+	//Formats the set of supported commands into a string
 	private String getSupportedCommandsAsString() {
 		String commands = "";
 		for(String s : SUPPORTED_COMMANDS) {
@@ -412,9 +403,10 @@ public class WorkerThread extends Thread {
 		return commands;
 	}
 	
+	//Fulfills a conditional Get command (has an if-modified-by header)
 	public void conditionalGet(HTTPRequest clientRequest, DataOutputStream outToClient, BufferedReader inFromClient) {
 		BufferedReader fileReader = null;
-		String fileName = clientRequest.getUri().substring(1); //RICKY: cut off the leading forward slash from the filename, as it would not find file otherwise. 
+		String fileName = clientRequest.getUri().substring(1); //cut off the leading forward slash from the filename, as it would not find file otherwise. 
 		File requestedFile = new File(fileName);
 		
 		if(!(requestedFile.canRead()) && requestedFile.exists()) { //exists, but cannot be read -> Forbidden
@@ -424,15 +416,17 @@ public class WorkerThread extends Thread {
 			closeConnection(inFromClient, outToClient);
 			return;
 		}
+		
+		//Attempt to access the requested file
 		try {
 			fileReader = new BufferedReader(new FileReader(requestedFile));
-		} catch (FileNotFoundException e) {
-			//404 Not Found
+		} catch (FileNotFoundException e) { // Send 404 Not Found
 			HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "404", "Not Found");
 			sendResponse(response, outToClient, null);
 			closeConnection(inFromClient, outToClient);
 			return;
 		}
+		
 		//Compare the dates to determine what we need to respond with
 		Date ifModifiedBy = null;
 		try {
@@ -448,26 +442,26 @@ public class WorkerThread extends Thread {
 			}
 			return;
 		}
+		
+		
 		Date lastModified = null;
 		try {
 			lastModified = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z").parse(toHttpDateFormat(new Date(requestedFile.lastModified())));
 		} catch (ParseException e1) {
-			//this date comes directly from the file itself, should parse correctly, but if it doesn't, I guess we can just say internal server error.
+			//this date comes directly from the file itself, should parse correctly, but if it doesn't, we can just say internal server error.
 			HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL,"500", "Internal Server Error");
 			sendResponse(response, outToClient, null);
 			closeConnection(inFromClient, outToClient);
 			try {
 				fileReader.close();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			return;
 		}
 		
 		
-		if(lastModified.compareTo(ifModifiedBy) < 1){
-			//not modified
+		if(lastModified.compareTo(ifModifiedBy) < 1){ //not modified
 			HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "304", "Not Modified");
 			response.addHeaderLines(null, null, null, null, generateExpirationDate(), null);
 			sendResponse(response, outToClient, null);
@@ -475,12 +469,12 @@ public class WorkerThread extends Thread {
 			try {
 				fileReader.close();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			return;
 		}
 		
+		//Send response
 		HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "200", "OK");
 		response.addHeaderLines(getSupportedCommandsAsString(), "identity", Long.toString(requestedFile.length()), getMIMEType(clientRequest.getUri()), 
 				generateExpirationDate(), toHttpDateFormat(new Date(requestedFile.lastModified())));
@@ -527,20 +521,22 @@ public class WorkerThread extends Thread {
 		closeConnection(inFromClient, outToClient);	
 	}
 	
+	//Fulfills requests with head command
 	public void head(HTTPRequest clientRequest, DataOutputStream outToClient, BufferedReader inFromClient) {
 		BufferedReader fileReader = null;
-		String fileName = clientRequest.getUri().substring(1); //RICKY: cut off the leading forward slash from the filename, as it would not find file otherwise. 
+		String fileName = clientRequest.getUri().substring(1); //cut off the leading forward slash from the filename, as it would not find file otherwise. 
 		File requestedFile = new File(fileName);
 		try {
 			fileReader = new BufferedReader(new FileReader(requestedFile));
 			fileReader.close();
-		} catch (IOException e) {
-			//404 Not Found
+		} catch (IOException e) { //404 Not Found
 			HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "404", "Not Found");
 			sendResponse(response, outToClient, null);
 			closeConnection(inFromClient, outToClient);
 			return;
 		}
+		
+		//create and send response
 		HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "200", "OK");
 		response.addHeaderLines(getSupportedCommandsAsString(), "identity", Long.toString(requestedFile.length()), getMIMEType(clientRequest.getUri()), 
 				generateExpirationDate(), toHttpDateFormat(new Date(requestedFile.lastModified())));
@@ -548,6 +544,7 @@ public class WorkerThread extends Thread {
 		closeConnection(inFromClient, outToClient);
 	}
 	
+	//Fullfills requests with post command
 	public void post(HTTPRequest clientRequest, DataOutputStream outToClient, BufferedReader inFromClient, Socket clientSocket) {
 		//When the POST request doesn't have the "Content-Length" header, or the value is not numeric, your server should return "HTTP/1.0 411 Length Required".
 		if(clientRequest.getContentLength() == null) {
@@ -564,19 +561,12 @@ public class WorkerThread extends Thread {
 			closeConnection(inFromClient, outToClient);
 			return;
 		}
-		/*
-		if(clientRequest.getContentLength() == 0) {
-			HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "204", "No Content");
-			sendResponse(response, outToClient, null);
-			closeConnection(inFromClient, outToClient);
-			return;
-		}
-		*/
 		
 		BufferedReader fileReader = null;
-		String fileName = clientRequest.getUri().substring(1); //RICKY: cut off the leading forward slash from the filename, as it would not find file otherwise. 
+		String fileName = clientRequest.getUri().substring(1); //cut off the leading forward slash from the filename, as it would not find file otherwise. 
 		File requestedFile = new File(fileName);
 		
+		//check that requested file is a cgi script
 		if(!fileName.substring(fileName.length()-6).contains(".cgi")) {
 			HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "405", "Method Not Allowed");
 			sendResponse(response, outToClient, null);
@@ -602,8 +592,6 @@ public class WorkerThread extends Thread {
 		
 		
 		//run a process in server w/ cgi script
-		
-		
 		String systemCommand = "./" + fileName;
 		String cmdArray[] = new String[2];
 		cmdArray[0] = systemCommand;
@@ -611,20 +599,8 @@ public class WorkerThread extends Thread {
 		
 		
 		Runtime r = Runtime.getRuntime();
-		/*ArrayList<String> environmentVariables = new ArrayList<>();
-		environmentVariables.add("CONTENT_LENGTH=" + decodedQueryString.getBytes().length);
-		environmentVariables.add("SCRIPT_NAME=" + clientRequest.getUri());
-		environmentVariables.add("SERVER_NAME=" + clientSocket.getInetAddress().getHostAddress());
-		environmentVariables.add("SERVER_PORT=" + clientSocket.getPort());
-		environmentVariables.add(clientRequest.getFrom() != null ? "HTTP_FROM=" + clientRequest.getFrom() : null);
-		environmentVariables.add(clientRequest.getUserAgent() != null ? "HTTP_USER_AGENT=" + clientRequest.getUserAgent() : null);
-		
-		String[] env = environmentVariables.toArray(new String[NUM_ENVIRONMENT_VARIABLES]);
-		for(int i = 0; i < env.length; i++) {
-			System.out.println(env[i]);
-		}
-		*/
 		try {
+			//add environment variables
 			ProcessBuilder pb = new ProcessBuilder(systemCommand);
 			Map<String, String> env = pb.environment();
 			env.put("CONTENT_LENGTH", String.valueOf(clientRequest.getContentLength()));
@@ -636,10 +612,7 @@ public class WorkerThread extends Thread {
 			if(clientRequest.getUserAgent() != null)
 				env.put("HTTP_USER_AGENT", clientRequest.getUserAgent());
 			
-			/*for(String variable : env.keySet()) {
-				System.out.println(variable + "=" + env.get(variable));
-			}*/
-			
+			//start new process to run cgi script in
 			Process p = pb.start();
 			BufferedReader stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
 			OutputStream stdOutput = p.getOutputStream();
@@ -655,7 +628,7 @@ public class WorkerThread extends Thread {
 			while ((line = stdInput.readLine()) != null)
 			      output += line + "\n";
 			
-			
+			//Check if cgi script had any output
 			if(output.length() == 0) {
 				HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "204", "No Content");
 				sendResponse(response, outToClient, null);
@@ -663,15 +636,14 @@ public class WorkerThread extends Thread {
 				return;
 			}
 			
-			
+			//add cgi output to response
 			HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "200", "OK");
 			response.addHeaderLines(getSupportedCommandsAsString(), Long.toString(output.getBytes().length), "text/html", 
 					generateExpirationDate());
 			sendResponse(response,outToClient, output.getBytes());
 			closeConnection(inFromClient, outToClient);
-			
-			//System.out.println("EXIT VALUE IS: " + p.exitValue());
 			return;
+			
 		} catch (SecurityException e) {
 			e.printStackTrace();
 		} catch (IOException e) { // Not allowed to execute the .cgi file
@@ -684,31 +656,9 @@ public class WorkerThread extends Thread {
 			i.printStackTrace();
 		}
 		
-		
-		
-		
-		
-		//pass decoded payload to stdin
-		
-		/*
-		HTTPResponse response = new HTTPResponse(REQUIRED_PROTOCOL, "200", "OK");
-		sendResponse(response, outToClient, null);
-		closeConnection(inFromClient, outToClient);
-		return;
-		*/
 	}
 	
-	public static ArrayList <Byte> readBytes(InputStream inputStream) throws IOException {
-		ArrayList <Byte> byteList = new ArrayList<Byte>();
-		
-		int currentByteInt = -1;
-		while ((currentByteInt = inputStream.read()) != -1) {
-			byte currentByte = (byte) currentByteInt;
-			byteList.add(currentByte);
-		}
-		return byteList;
-	}
-	
+	//Creates the HTML string for requests w/o a valid cookie
 	public String createHTML() {
 		return "<html>\n "
 				+ "<body>\n "
@@ -720,6 +670,7 @@ public class WorkerThread extends Thread {
 				+ "</html>";
 	}
 	
+	//Creates the HTML string for requests that contain a valid cookie
 	public String createHTMLSeen(String datetime) {
 		return "<html>\n "
 				+ "<body>\n "
@@ -731,6 +682,7 @@ public class WorkerThread extends Thread {
 				+ "</html>";
 	}
 	
+	//Decodes pay loads for post requests
 	public String decodeQuery(String encoded) {
 		String encodedQueryString = encoded;
 		String decodedQueryString = "";
@@ -745,11 +697,5 @@ public class WorkerThread extends Thread {
 		}
 		return decodedQueryString;
 	}
-	
-	//IGNORE THIS RICKY IT IS ONLY FOR TESTING THAT THE CHANGES TO HTTPREQUEST WORK
-	public void forTest(String s) {
-		HTTPRequest testRequest = new HTTPRequest(s);
-		System.out.println(testRequest.toString());
-		System.out.println("ua: " + testRequest.getUserAgent());
-	}
+
 }

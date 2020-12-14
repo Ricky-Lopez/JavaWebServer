@@ -1,4 +1,4 @@
-/** class takes given entities and puts them into properly formatted HTTP response */
+//class takes given entities and puts them into properly formatted HTTP response
 public class HTTPResponse {
 	private boolean hasHeaderLines;
 	private boolean hasCookies;
@@ -8,7 +8,7 @@ public class HTTPResponse {
 	private String statusCode;
 	private String statusPhrase;
 	
-	//Header lines --> need for Ok response
+	//Header lines
 	private String allow = "Allow: ";
 	private String contentEncoding = "Content-Encoding: ";
 	private String contentLength = "Content-Length: "; // only included when entity body is being sent
@@ -17,12 +17,14 @@ public class HTTPResponse {
 	private String lastModified = "Last-Modified: ";
 	private String cookie = "Set-Cookie: ";
 	
+	//Creates a basic HTTP response containing the given protocol, status code, and status phrase
 	public HTTPResponse(String protocol, String statusCode, String statusPhrase) {
 		this.protocol = protocol;
 		this.statusCode = statusCode;
 		this.statusPhrase = statusPhrase;
 	}
 	
+	//Adds the provided header lines to this request
 	public void addHeaderLines(String allow, String contentLength, String contentType, String expires) {
 		this.allow += allow;
 		this.contentLength += contentLength;
@@ -31,6 +33,7 @@ public class HTTPResponse {
 		hasHeaderLines = true;
 	}
 	
+	//Adds the provided header lines to this request
 	public void addHeaderLines(String allow, String contentEncoding, String contentLength, String contentType, 
 			String expires, String lastModified) {
 		this.allow += allow;
@@ -42,7 +45,7 @@ public class HTTPResponse {
 		hasHeaderLines = true;
 	}
 	
-	//If contains a cookie :)
+	//Adds the provided header lines to this request
 	public void addHeaderLines(String allow, String contentEncoding, String contentLength, String contentType,
 			String expires, String lastModified, String cookie) {
 		this.allow += allow;
@@ -56,6 +59,7 @@ public class HTTPResponse {
 		hasCookies = true;
 	}
 	
+	//returns this response object as a String that can be sent back to the client
 	public String generateHttpResponse() {
 		String response = "";
 		String statusLine = protocol + " " + statusCode + " " + statusPhrase;

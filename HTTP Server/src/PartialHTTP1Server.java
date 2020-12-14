@@ -80,7 +80,7 @@ public class PartialHTTP1Server {
 							t.start();	
 						}
 					}
-					else {
+					else { //We have reached our max of 50 threads, cannot provide service to client
 						//return 503 service unavailable -- ONLY TIME WE CAN WRITE FROM MAIN THREAD
 						DataOutputStream outToClient = null;
 						try {
@@ -100,13 +100,11 @@ public class PartialHTTP1Server {
 						try {
 							outToClient.flush();
 						} catch (IOException e) {
-							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
 						try {
 							outToClient.close();
 						} catch (IOException e) {
-							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
 						
